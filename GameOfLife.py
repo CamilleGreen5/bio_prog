@@ -1,6 +1,20 @@
 import numpy as np
 import random
-import cv2 as cv
+import pygame
+import sys
+from pygame.locals import *
+
+SIZE = (600, 600)
+
+
+def wait():
+    while True:
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == KEYDOWN and event.key == K_SPACE:
+                return
 
 
 def initialisation(map, dim_map, nb_cell_init):
@@ -48,25 +62,36 @@ if __name__ == "__main__":
     NB_CELL_INIT = 150
     MAP = np.zeros(DIM_MAP, np.uint8)
 
-    cv.namedWindow('map', cv.WINDOW_NORMAL)
-    cv.imshow("map", MAP)
-    cv.waitKey(0)
+    pygame.init()
+    fenetre = pygame.display.set_mode(SIZE)
 
     MAP = initialisation(MAP, DIM_MAP, NB_CELL_INIT)
+    MAP_IMAGE = pygame.surfarray.make_surface(MAP)
+    MAP_IMAGE = pygame.transform.scale(MAP_IMAGE, SIZE)
+    fenetre.blit(MAP_IMAGE, (0, 0))
+    pygame.display.update()
 
-    cv.imshow("map", MAP)
-    cv.waitKey(0)
+    wait()
 
-    for t in range(T):
+    running = True
+    t = 0
+
+    while t < T and running == True:
+
+        for evt in pygame.event.get():
+            if evt.type == pygame.QUIT:
+                running = False
+                pygame.quit()
+
+        MAP_IMAGE = pygame.surfarray.make_surface(MAP)
+        MAP_IMAGE = pygame.transform.scale(MAP_IMAGE, SIZE)
+        fenetre.blit(MAP_IMAGE, (0, 0))
+        pygame.time.delay(100)
+        pygame.display.update()
 
         MAP = update(MAP, DIM_MAP)
 
-        cv.resizeWindow('map', 600, 600)
-        cv.imshow("map", MAP)
-        cv.waitKey(1000)
+        t += 1
+
         print('t = ', t)
 
-    cv.imshow("map", MAP)
-    cv.waitKey(0)
-
-    cv.destroyAllWindows()

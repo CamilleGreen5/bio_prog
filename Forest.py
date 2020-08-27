@@ -1,13 +1,27 @@
 import numpy as np
 import random
-import cv2 as cv
+import pygame
+import sys
+from pygame.locals import *
+
+SIZE = (600, 600)
 
 DIRT_COLOR = [0, 0, 0]
 TREE_COLOR = [0, 255, 0]
-FIRE_COLOR = [0, 0, 255]
+FIRE_COLOR = [255, 0, 0]
 CENDER_COLOR = [255, 255, 255]
 
 INIT_TREE_PROBA = "GAUSS"  # ou RAND
+
+
+def wait():
+    while True:
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == KEYDOWN and event.key == K_SPACE:
+                return
 
 
 def initialisation_forest(map, dim_map, nb_tree_init):
@@ -71,35 +85,51 @@ def update(map, dim_map):
 if __name__ == "__main__":
 
     T = 100
-    DIM_MAP = (100, 100, 3)
-    NB_TREE_INIT = 7000
+    DIM_MAP = (10, 10, 3)
+    NB_TREE_INIT = 70
     MAP = np.zeros(DIM_MAP, np.uint8)
 
-    cv.namedWindow('map', cv.WINDOW_NORMAL)
-    cv.resizeWindow('map', 600, 600)
-    cv.imshow("map", MAP)
-    cv.waitKey(0)
+    pygame.init()
+    fenetre = pygame.display.set_mode(SIZE)
 
     MAP = initialisation_forest(MAP, DIM_MAP, NB_TREE_INIT)
 
-    cv.imshow("map", MAP)
-    cv.waitKey(0)
+    MAP_IMAGE = pygame.surfarray.make_surface(MAP)
+    MAP_IMAGE = pygame.transform.scale(MAP_IMAGE, SIZE)
+    fenetre.blit(MAP_IMAGE, (0, 0))
+    pygame.display.update()
+
+    wait()
 
     MAP = initialisation_fire(MAP, DIM_MAP)
 
-    cv.imshow("map", MAP)
-    cv.waitKey(0)
+    MAP_IMAGE = pygame.surfarray.make_surface(MAP)
+    MAP_IMAGE = pygame.transform.scale(MAP_IMAGE, SIZE)
+    fenetre.blit(MAP_IMAGE, (0, 0))
+    pygame.display.update()
 
-    for t in range(T):
+    wait()
+
+    t = 0
+    running = True
+
+    while t < T and running is True:
+
+        for evt in pygame.event.get():
+            if evt.type == pygame.QUIT:
+                running = False
+                pygame.quit()
 
         MAP = update(MAP, DIM_MAP)
 
-        cv.resizeWindow('map', 600, 600)
-        cv.imshow("map", MAP)
-        cv.waitKey(1)
+        MAP_IMAGE = pygame.surfarray.make_surface(MAP)
+        MAP_IMAGE = pygame.transform.scale(MAP_IMAGE, SIZE)
+        fenetre.blit(MAP_IMAGE, (0, 0))
+        pygame.time.delay(100)
+        pygame.display.update()
+
+        t += 1
+
         print('t = ', t)
 
-    cv.imshow("map", MAP)
-    cv.waitKey(0)
 
-    cv.destroyAllWindows()

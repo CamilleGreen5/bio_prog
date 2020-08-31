@@ -1,6 +1,6 @@
 import numpy as np
 import random
-import cv2 as cv
+import matplotlib.pyplot as plt
 import sys
 import pygame
 from pygame.locals import *
@@ -16,6 +16,9 @@ MOV = [[0, 1], [1, 0], [0, -1], [-1, 0]]     # droite bas gauche haut
 T = 10000
 DIM_MAP = (20, 20, 3)
 NB_WALL_INIT = 400
+
+FACT_ACTU = 1
+FACT_LEARNING = 0.1
 
 
 def wait():
@@ -64,17 +67,8 @@ def find_possible_mov_id(map, dim, pos):
     return possible_mov_id
 
 
-def update(map, dim, pos, q_table):
-    mov_id = random.choices([i for i in range(4)], q_table[pos[0], pos[1]])
-    map[pos[0], pos[1]] = PATH_COLOR
-    pos = np.add(pos, MOV[mov_id[0]])
-    map[pos[0], pos[1]] = PERSO_COLOR
-    # q_table = update_q_table(q_table, pos)
-    return map, pos
-
-
 def initialisation_Q(map, dim):
-    q_table = np.zeros((dim[0], dim[1], 4), np.uint8)
+    q_table = np.zeros((dim[0], dim[1], 4), np.uint16)
     for i in range(dim[0]):
         for j in range(dim[1]):
             pos = [i, j]
@@ -82,43 +76,37 @@ def initialisation_Q(map, dim):
             for id in possible_mov_id:
                 q_table[i, j, id] = 1
     for id in range(4):
-        q_table[dim[0]-1, dim[1]-1, id] = 255
+        q_table[dim[0]-1, dim[1]-1, id] = 65535
     return q_table
 
 
-def update_q_table(q_table):
+def update(map, dim, pos, q_table):
+    mov_id = random.choices([i for i in range(4)], q_table[pos[0], pos[1]])
+    map[pos[0], pos[1]] = PATH_COLOR
+    next_pos = np.add(pos, MOV[mov_id[0]])
+    q_table = update_q_table(q_table, pos, next_pos, mov_id[0])
+    pos = next_pos
+    map[pos[0], pos[1]] = PERSO_COLOR
+    return map, pos, q_table
 
+
+def update_q_table(q_table, pos, next_pos, mov_id):
+    target = q_table[pos[0], pos[1], mov_id]+FACT_ACTU*(q_table[next_pos[0], next_pos[1]].max())
+    q_table[pos[0], pos[1], mov_id] = (1-FACT_LEARNING)*q_table[pos[0], pos[1], mov_id] + FACT_LEARNING*target
     return q_table
 
 
-if __name__ == "__main__":
+def essaie_lab(map, q_table):
 
-    MAP = np.ones(DIM_MAP, np.uint8)
-    MAP = MAP*50
+    pos_perso = [0, 0]
+    map[0, 0] = PERSO_COLOR
 
-    pygame.init()
-    fenetre = pygame.display.set_mode(SIZE)
-
-    MAP, PATH = initialisation_lab(MAP, DIM_MAP, NB_WALL_INIT)
-
-    MAP_IMAGE = pygame.surfarray.make_surface(np.transpose(MAP, (1, 0, 2)))
+    MAP_IMAGE = pygame.surfarray.make_surface(np.transpose(map, (1, 0, 2)))
     MAP_IMAGE = pygame.transform.scale(MAP_IMAGE, SIZE)
     fenetre.blit(MAP_IMAGE, (0, 0))
     pygame.display.update()
 
-    wait()
-
-    Q_TABLE = initialisation_Q(MAP, DIM_MAP)
-
-    POS_PERSO = [0, 0]
-    MAP[0, 0] = PERSO_COLOR
-
-    MAP_IMAGE = pygame.surfarray.make_surface(np.transpose(MAP, (1, 0, 2)))
-    MAP_IMAGE = pygame.transform.scale(MAP_IMAGE, SIZE)
-    fenetre.blit(MAP_IMAGE, (0, 0))
-    pygame.display.update()
-
-    wait()
+    # wait()
 
     t = 0
     running = True
@@ -131,25 +119,63 @@ if __name__ == "__main__":
                 running = False
                 pygame.quit()
 
-        MAP, POS_PERSO = update(MAP, DIM_MAP, POS_PERSO, Q_TABLE)
+        map, pos_perso, q_table = update(map, DIM_MAP, pos_perso, q_table)
 
-        MAP_IMAGE = pygame.surfarray.make_surface(np.transpose(MAP, (1, 0, 2)))
+        MAP_IMAGE = pygame.surfarray.make_surface(np.transpose(map, (1, 0, 2)))
         MAP_IMAGE = pygame.transform.scale(MAP_IMAGE, SIZE)
         fenetre.blit(MAP_IMAGE, (0, 0))
         pygame.time.delay(100)
         pygame.display.update()
 
-        if POS_PERSO[0] == DIM_MAP[0]-1 and POS_PERSO[1] == DIM_MAP[1]-1:
+        if pos_perso[0] == DIM_MAP[0]-1 and pos_perso[1] == DIM_MAP[1]-1:
             running = False
             victory = True
 
         t += 1
-        print('t = ', t)
+        # print('t = ', t)
 
     if victory:
         print("VICTORY")
     else:
         print('LOSE')
+    return t
+
+
+if __name__ == "__main__":
+
+    SCORES = []
+    MAP = np.ones(DIM_MAP, np.uint8)
+    MAP = MAP * 50
+
+    pygame.init()
+    fenetre = pygame.display.set_mode(SIZE)
+
+    MAP, PATH = initialisation_lab(MAP, DIM_MAP, NB_WALL_INIT)
+    Q_TABLE = initialisation_Q(MAP, DIM_MAP)
+
+    MAP_IMAGE = pygame.surfarray.make_surface(np.transpose(MAP, (1, 0, 2)))
+    MAP_IMAGE = pygame.transform.scale(MAP_IMAGE, SIZE)
+    fenetre.blit(MAP_IMAGE, (0, 0))
+    pygame.display.update()
+
+    wait()
+
+    nb_train = 0
+
+    while nb_train < 1000:
+        t = essaie_lab(MAP, Q_TABLE)
+        SCORES.append(t)
+        nb_train += 1
+
+    plt.plot([i for i in range(len(SCORES))], SCORES)
+    plt.show()
+
+    wait()
+
+    t = essaie_lab(MAP, Q_TABLE)
+
+    wait()
 
     wait()
     pygame.quit()
+

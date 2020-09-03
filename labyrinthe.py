@@ -14,11 +14,12 @@ DIRT_COLOR = [50, 50, 50]
 MOV = [[0, 1], [1, 0], [0, -1], [-1, 0]]     # droite bas gauche haut
 
 T = 10000
-DIM_MAP = (20, 20, 3)
-NB_WALL_INIT = 400
+DIM_MAP = (10, 10, 3)
+NB_WALL_INIT = 100
 
-FACT_ACTU = 1
+FACT_ACTU = 0.9
 FACT_LEARNING = 0.1
+EPSILON = 0.9
 
 
 def wait():
@@ -80,8 +81,17 @@ def initialisation_Q(map, dim):
     return q_table
 
 
-def update(map, dim, pos, q_table):
-    mov_id = random.choices([i for i in range(4)], q_table[pos[0], pos[1]])
+def update(map, dim, pos, q_table, epsilon):
+    type_of_action = random.choices([0, 1], [epsilon, (1 - epsilon)])
+    if type_of_action[0] == 0:
+        max_values_id = []
+        mov_max_id = q_table[pos[0], pos[1]].argmax()
+        for i in range(4):
+            if q_table[pos[0], pos[1], i] == q_table[pos[0], pos[1], mov_max_id]:
+                max_values_id.append(i)
+        mov_id = random.choices(max_values_id, [1 for i in range(len(max_values_id))])
+    else:
+        mov_id = random.choices([i for i in range(4)], q_table[pos[0], pos[1]])
     map[pos[0], pos[1]] = PATH_COLOR
     next_pos = np.add(pos, MOV[mov_id[0]])
     q_table = update_q_table(q_table, pos, next_pos, mov_id[0])
@@ -96,7 +106,7 @@ def update_q_table(q_table, pos, next_pos, mov_id):
     return q_table
 
 
-def essaie_lab(map, q_table):
+def essaie_lab(map, q_table,epsilon):
 
     pos_perso = [0, 0]
     map[0, 0] = PERSO_COLOR
@@ -119,7 +129,7 @@ def essaie_lab(map, q_table):
                 running = False
                 pygame.quit()
 
-        map, pos_perso, q_table = update(map, DIM_MAP, pos_perso, q_table)
+        map, pos_perso, q_table = update(map, DIM_MAP, pos_perso, q_table, epsilon)
 
         MAP_IMAGE = pygame.surfarray.make_surface(np.transpose(map, (1, 0, 2)))
         MAP_IMAGE = pygame.transform.scale(MAP_IMAGE, SIZE)
@@ -162,8 +172,8 @@ if __name__ == "__main__":
 
     nb_train = 0
 
-    while nb_train < 1000:
-        t = essaie_lab(MAP, Q_TABLE)
+    while nb_train < 100:
+        t = essaie_lab(MAP, Q_TABLE, EPSILON)
         SCORES.append(t)
         nb_train += 1
 
@@ -172,7 +182,7 @@ if __name__ == "__main__":
 
     wait()
 
-    t = essaie_lab(MAP, Q_TABLE)
+    t = essaie_lab(MAP, Q_TABLE, EPSILON)
 
     wait()
 
